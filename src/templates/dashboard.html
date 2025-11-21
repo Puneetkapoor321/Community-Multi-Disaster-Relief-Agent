@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clear Vibe | CommunityRelief Live Agent</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}" />
+  </head>
+
+  <body>
+    <div class="page">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">CommunityRelief • Real-Time</p>
+          <h1>Clear Vibe Disaster Rescue Console</h1>
+          <p class="subhead">
+            Multi-agent AI pipeline that listens, triages, and allocates help in
+            seconds.
+          </p>
+          <div class="hero-actions">
+            <button class="badge live">● Live</button>
+            <span id="last-event">Awaiting signal…</span>
+          </div>
+        </div>
+        <div class="hero-card">
+          <p class="label">Realtime Signal Health</p>
+          <h2 id="hero-severity">Low Traffic</h2>
+          <small>Updated <span id="hero-updated">just now</span></small>
+        </div>
+      </header>
+
+      <section class="grid">
+        <div class="card form-card">
+          <div class="card-header">
+            <h3>Inject Field Report</h3>
+            <p>Simulate a live incident and watch the agents respond.</p>
+          </div>
+          <form id="incident-form">
+            <label>Reporter / Channel</label>
+            <input name="reporter" placeholder="radio-alpha, sms-5590, etc." />
+
+            <label>Situation Text *</label>
+            <textarea
+              name="text"
+              required
+              placeholder="e.g. Large wildfire spotted near Lakeside Park..."
+            ></textarea>
+
+            <label>Approximate Location (text)</label>
+            <input name="place_text" placeholder="City, landmark or GPS" />
+
+            <div class="split">
+              <div>
+                <label>Latitude</label>
+                <input name="lat" placeholder="20.6" />
+              </div>
+              <div>
+                <label>Longitude</label>
+                <input name="lon" placeholder="72.6" />
+              </div>
+            </div>
+
+            <button type="submit">Dispatch to Clear Vibe</button>
+            <p class="help-text">
+              Missing coordinates? Provide a place name and the geocoder agent
+              will resolve it.
+            </p>
+          </form>
+        </div>
+
+        <div class="card feed-card">
+          <div class="card-header">
+            <h3>Multi-Agent Activity Feed</h3>
+            <p>Receiver → Triage → Coordinator → Resource</p>
+          </div>
+          <ul id="live-feed"></ul>
+        </div>
+      </section>
+
+      <section class="card pipeline-card">
+        <div class="card-header">
+          <h3>Pipeline Status</h3>
+          <p>Clear Vibe agent stages and responsibilities.</p>
+        </div>
+        <div class="pipeline" id="pipeline-track">
+          {% for step in pipeline %}
+          <div class="pipeline-step">
+            <div class="dot"></div>
+            <div>
+              <p class="label">{{ step.label }}</p>
+              <p>{{ step.description }}</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="card history-card">
+        <div class="card-header">
+          <h3>Recent Incidents</h3>
+          <p>Stored in memory.db — newest first.</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Reporter</th>
+              <th>Severity</th>
+              <th>Created</th>
+              <th>Location</th>
+            </tr>
+          </thead>
+          <tbody id="history-body"></tbody>
+        </table>
+      </section>
+    </div>
+
+    <script id="events-data" type="application/json">
+      {{ events | tojson | safe }}
+    </script>
+    <script id="history-data" type="application/json">
+      {{ incidents | tojson | safe }}
+    </script>
+
+    <script>
+      const feedNode = document.getElementById("live-feed");
+      const historyNode = document.getElementById("history-body");
+      const severityLabel = document.getElementById("hero-severity");
+      const heroUpdated = document.getElementById("hero-updated");
+      const lastEvent = document.getElementById("last-event");
+      const eventsSeed =
+        document.getElementById("events-data").textContent || "[]";
+      const historySeed =
+        document.getElementById("history-data").textContent || "[]";
+      let feed = JSON.parse(eventsSeed);
+      const history = JSON.parse(historySeed);
+
+      const severityColors = {
+        high: "badge danger",
+        medium: "badge warn",
+        low: "badge idle",
+      };
+
+      function formatTime(ts) {
+        if (!ts) return "—";
+        return new Date(ts).toLocaleString();
+      }
+
+      function severityBadge(level) {
+        const cls = severityColors[level] || "badge idle";
+        const label = (level || "unknown").toUpperCase();
+        return `<span class="${cls}">${label}</span>`;
+      }
+
+      function renderFeed() {
+        if (!feed.length) {
+          feedNode.innerHTML = '<li class="empty">Awaiting incidents…</li>';
+          return;
+        }
+        feedNode.innerHTML = feed
+          .map(
+            (event) => `
+              <li>
+                  <div class="feed-header">
+                      <strong>${event.reporter || "unknown channel"}</strong>
+                      ${severityBadge(event.severity)}
+                  </div>
+                  <p>${event.text || ""}</p>
+                  <div class="feed-meta">
+                      <span>${event.stage}</span>
+                      <span>${formatTime(event.triage_ts)}</span>
+                  </div>
+                  ${renderAllocation(event.allocation)}
+              </li>
+          `
+          )
+          .join("");
+
+        const latest = feed[0];
+        if (latest) {
+          severityLabel.textContent = latest.severity
+            ? `${latest.severity.toUpperCase()} alert`
+            : "Monitoring";
+          heroUpdated.textContent = formatTime(latest.triage_ts);
+          lastEvent.textContent =
+            latest.text?.slice(0, 60) || "Signal processed";
+        }
+      }
+
+      function renderAllocation(allocation) {
+        if (!allocation || !Object.keys(allocation).length) return "";
+        const blocks = Object.entries(allocation)
+          .map(([kind, items]) => `<span>${kind}: ${items.length}</span>`)
+          .join("");
+        return `<div class="allocation">${blocks}</div>`;
+      }
+
+      function renderHistory() {
+        historyNode.innerHTML = history
+          .map(
+            (inc) => `
+              <tr>
+                  <td>${inc.id}</td>
+                  <td>${inc.reporter || "—"}</td>
+                  <td>${severityBadge(inc.severity)}</td>
+                  <td>${formatTime(inc.created_at)}</td>
+                  <td>${inc.lat ? inc.lat.toFixed(2) : "—"}, ${
+              inc.lon ? inc.lon.toFixed(2) : "—"
+            }</td>
+              </tr>
+          `
+          )
+          .join("");
+      }
+
+      async function refreshFeed() {
+        const resp = await fetch("/api/stream");
+        const data = await resp.json();
+        feed = data.events || [];
+        renderFeed();
+      }
+
+      document
+        .getElementById("incident-form")
+        .addEventListener("submit", async (evt) => {
+          evt.preventDefault();
+          const formData = new FormData(evt.target);
+          const payload = Object.fromEntries(formData.entries());
+          const resp = await fetch("/api/incidents", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await resp.json();
+          if (data.event) {
+            feed.unshift(data.event);
+            renderFeed();
+            evt.target.reset();
+          } else {
+            alert(data.message || "Failed to create incident");
+          }
+        });
+
+      renderFeed();
+      renderHistory();
+      setInterval(refreshFeed, 4000);
+    </script>
+  </body>
+</html>

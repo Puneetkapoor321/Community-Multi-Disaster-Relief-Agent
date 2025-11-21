@@ -1,0 +1,8 @@
+flask
+requests
+geopy
+pandas
+feedparser
+python-dotenv
+sqlalchemy
+autopep8
