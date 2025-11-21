@@ -106,7 +106,14 @@ This flowchart explains how a user interacts with the CommunityRelief ecosystem:
 - **OpenStreetMap Geocoding API** (previously via the Nominatim service)
 
 ---
-
+<p align="center">
+  <img src="assets/clear_vibe.png" width="550">
+</p>
+ 
+<p align="center">
+  <img src="assets/pipeline_status.png" width="550">
+</p>
+---
 # 🚀 Running from the Project Root
 
 Everything lives under the repo root (`communityrelief-agents/`). From that folder you can:
