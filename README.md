@@ -113,8 +113,9 @@ This flowchart explains how a user interacts with the CommunityRelief ecosystem:
 <p align="center">
   <img src="assets/pipeline_status.png" width="550">
 </p>
----
-# 🚀 Running from the Project Root
+
+
+#  🚀 Running from the Project Root
 
 Everything lives under the repo root (`communityrelief-agents/`). From that folder you can:
 
@@ -164,3 +165,5 @@ Launching from the project root gives you a fully functioning response simulator
 - **Historical pane** pulls directly from `memory.db`, ensuring persistence across sessions.
 
 Use the repo root as your base for all commands, environment setup, and deployments to keep modules importable (`src` is a package) and assets discoverable by Flask.
+
+- **This Project is also available in my kaggle notebook** - https://kaggle.com/competitions/agents-intensive-capstone-project/writeups/new-writeup-1763568568240
